@@ -1,0 +1,4 @@
+{
+    // python vitual environment setting
+    "python.pythonPath": "./venv/bin/python"
+}

@@ -1,0 +1,43 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+Statistics	../lab3.py	/^class Statistics:$/;"	kind:class	line:16
+Student	../lab3.py	/^class Student:$/;"	kind:class	line:10
+__init__	../lab3.py	/^    def __init__(self, name, grade):$/;"	kind:member	line:11
+add_student	../lab3.py	/^def add_student():$/;"	kind:function	line:50
+app	../lab3.py	/^app = Flask(__name__)$/;"	kind:variable	line:6
+app	../main.py	/^app = Flask(__name__)$/;"	kind:variable	line:5
+average	../lab3.py	/^    average = 0$/;"	kind:variable	line:19
+create_order	../main.py	/^def create_order():$/;"	kind:function	line:27
+database	../lab3.py	/^database = []$/;"	kind:variable	line:7
+database	../main.py	/^database = {}$/;"	kind:variable	line:6
+delete_order	../main.py	/^def delete_order(id):$/;"	kind:function	line:62
+delete_student	../lab3.py	/^def delete_student(name):$/;"	kind:function	line:81
+easy_install	../venv/bin/easy_install	1;"	kind:file	line:1
+easy_install-3.6	../venv/bin/easy_install-3.6	1;"	kind:file	line:1
+epylint	../venv/bin/epylint	1;"	kind:file	line:1
+flask	../venv/bin/flask	1;"	kind:file	line:1
+get_statistics	../lab3.py	/^def get_statistics():$/;"	kind:function	line:106
+get_student	../lab3.py	/^def get_student(name):$/;"	kind:function	line:72
+get_students	../lab3.py	/^def get_students():$/;"	kind:function	line:65
+isort	../venv/bin/isort	1;"	kind:file	line:1
+lab3.py	../lab3.py	1;"	kind:file	line:1
+main.py	../main.py	1;"	kind:file	line:1
+max	../lab3.py	/^    max = None$/;"	kind:variable	line:18
+min	../lab3.py	/^    min = None$/;"	kind:variable	line:17
+num_of_students	../lab3.py	/^    num_of_students = 0$/;"	kind:variable	line:20
+pip	../venv/bin/pip	1;"	kind:file	line:1
+pip3	../venv/bin/pip3	1;"	kind:file	line:1
+pip3.6	../venv/bin/pip3.6	1;"	kind:file	line:1
+print_database	../main.py	/^def print_database():$/;"	kind:function	line:70
+pylint	../venv/bin/pylint	1;"	kind:file	line:1
+pyreverse	../venv/bin/pyreverse	1;"	kind:file	line:1
+read_order	../main.py	/^def read_order(id):$/;"	kind:function	line:44
+statistics	../lab3.py	/^def statistics():$/;"	kind:function	line:23
+symilar	../venv/bin/symilar	1;"	kind:file	line:1
+templete	../main.py	/^templete = {'order': None, $/;"	kind:variable	line:7
+update_order	../main.py	/^def update_order():$/;"	kind:function	line:58
+update_student	../lab3.py	/^def update_student(name):$/;"	kind:function	line:90
