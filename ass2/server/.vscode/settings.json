@@ -6,7 +6,7 @@
         "cpp": "cd $dir && g++ $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
         "objective-c": "cd $dir && gcc -framework Cocoa $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
         "php": "php",
-        "python": "python",
+        "python": "./venv/bin/python",
         "perl": "perl",
         "perl6": "perl6",
         "ruby": "ruby",
@@ -40,5 +40,5 @@
         "haskell": "runhaskell",
         "nim": "nim compile --verbosity:0 --hints:off --run",
         "html": "firefox"
-    },
+    }
 }
