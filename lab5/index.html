@@ -20,10 +20,12 @@
     </style>
     <script src="http://d3js.org/d3.v3.min.js"></script>
 </head>
+
 <body>
 <script>
     var url = "http://localhost:5000/mem";
     d3.json(url, function (json) {
+        console.log(json)
         plot(json)
     });
 
@@ -31,16 +33,22 @@
         memory_history.forEach(function (e) {
             // Convert the timestamp to human readable date
             e.date = new Date(e.date * 1000);
+            // console.log(e.date)
         });
 
         var margin = {top: 50, right: 50, bottom: 50, left: 50}
         var width = 1100;
         var height = 500;
 
+        // d3.scale.linear() creates a simple liner scale;
         var xScale = d3.time.scale();
         var yScale = d3.scale.linear();
 
-
+        // since the memory usage is a number between 0 to 100, we use .
+        // domain to set this limit. We also need to set the output range
+        //  of the scale function, and this can be doe by the .range function. 
+        // In short, any value from [0 , 100] will be mapped to a number
+        //  in the range of [450, 50]. 
         xScale.range([margin.left, width - margin.right])
             .domain([
                 d3.min(memory_history, function (d) {
@@ -52,7 +60,8 @@
             ]);
 
         yScale.range([height - margin.top, margin.bottom]).domain([0, 100])
-
+        
+        // create the X & Y axis base don the scale functions. 
         var xAxis = d3.svg.axis().scale(xScale);
         var yAxis = d3.svg.axis().scale(yScale).orient("left").tickPadding(5).ticks(5);
 
