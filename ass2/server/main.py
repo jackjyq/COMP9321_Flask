@@ -3,8 +3,12 @@ import urllib
 import simplejson
 import models
 import xmltodict
-from flask import jsonify
+import dicttoxml
+from functools import wraps
 from collections import defaultdict
+from flask import jsonify, request, Flask
+from flask_restful import reqparse, request, abort
+from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer)
 
 
 URL_BOCSAR = "http://resource.mcndsj.com/lga/"
@@ -12,8 +16,10 @@ URL_AUPOST = """https://docs.google.com/spreadsheets/d/1tHCxouhyM4edDvF6\
                 0VG7nzs5QxID3ADwr3DGJh71qFg/edit#gid=900781287"""
 PATH_XLSX = "./xlsx/"
 JSON_PATH = "./json/"
+SECRET_KEY = "A RANDOM KEY"
 
 
+############################ helper function ############################
 def download_xlsx(name):
     try:
         urllib.request.urlretrieve(URL_BOCSAR + name + '.xlsx', \
@@ -80,14 +86,114 @@ def read_postcode():
     # function return
     return postcode_to_region
 
-############################# main function #############################
-postcode_to_region = read_postcode()
+ 
+######################## authentication function ########################
 
-# name = "Balranaldlga"
-# # download_xlsx(name)
-# my_dict = read_excel(name)
-# my_json = simplejson.dumps(my_dict)
-# # print(xmltodict.unparse(my_json))
-# # wirte_json(name, my_json)
-# # models.save_database(name, my_json)
-# print(models.query_database(name))
+def authenticate_by_token(token, must_admin=False):
+    if token is None:
+        return False
+    s = Serializer(SECRET_KEY)
+    try:
+        username = s.loads(token.encode())
+        if must_admin:  # only allow admin to login
+            if username == 'admin':
+                return True
+        else:   # allow everyone to login
+            if ((username == 'admin') or (username == 'guest')):
+                return True
+    except:
+        return False
+
+    return False
+
+
+# login as admin or guest
+def login_required(f, message="You are not authorized"):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+
+        token = request.headers.get("AUTH_TOKEN")
+        print("token=", token)
+        if authenticate_by_token(token, must_admin=False):
+            return f(*args, **kwargs)
+
+        return jsonify(message=message), 401
+        # abort(401, message=message)
+
+    return decorated_function
+
+
+# only allowed login as admin
+def admin_login_required(f, message="You are not authorized"):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+
+        token = request.headers.get("AUTH_TOKEN")
+        if authenticate_by_token(token, must_admin=True):
+            return f(*args, **kwargs)
+
+        return jsonify(message=message), 401
+        # abort(401, message=message)
+
+    return decorated_function
+
+
+############################# REST function #############################
+app = Flask(__name__)
+
+
+@app.route("/admin", methods=['GET'])
+@admin_login_required
+def test():
+    print("You are admin!")
+
+
+@app.route("/", methods=['GET'])
+@login_required
+def gogogo():
+    print("You are login!")
+
+
+@app.route("/auth", methods=['GET'])
+def generate_token():
+        parser = reqparse.RequestParser()
+        parser.add_argument('username', type=str)
+        parser.add_argument('password', type=str)
+        args = parser.parse_args()
+
+        username = args.get("username")
+        password = args.get("password")
+
+        # debug function
+        # print("Username =", username)
+        # print("Password =", password)
+
+        s = Serializer(SECRET_KEY, expires_in=600)
+        token = s.dumps(username)
+
+        if ((username == 'admin' and password == 'admin')
+                or (username == 'guest' and password == 'guest')):
+            return token.decode()
+
+        return jsonify({"ERROR" : "wrong username or password"}), 404
+
+
+############################# main function #############################
+if __name__ == "__main__":
+    app.run()
+    # postcode_to_region = read_postcode()
+    # name = "Balranaldlga"
+    # # # download_xlsx(name)
+    # my_dict = read_excel(name)
+    # # my_json = simplejson.dumps(my_dict)
+    # my_xml = dicttoxml.dicttoxml(
+    #         my_dict, 
+    #         attr_type=False, 
+    #         root=False)
+
+    # print(str(my_xml))
+    # print(my_dict)
+    # # print(xmltodict.unparse(my_json))
+    # # wirte_json(name, my_json)
+    # # models.save_database(name, my_json)
+    # print(models.query_database(name))
