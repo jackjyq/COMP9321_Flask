@@ -4,33 +4,35 @@ import simplejson
 import models
 import xmltodict
 import dicttoxml
+import json
 from functools import wraps
 from collections import defaultdict
+from datetime import datetime, timezone       
 from flask import jsonify, request, Flask
 from flask_restful import reqparse, request, abort
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer)
-
-
-URL_BOCSAR = "http://resource.mcndsj.com/lga/"
-URL_AUPOST = """https://docs.google.com/spreadsheets/d/1tHCxouhyM4edDvF6\
-                0VG7nzs5QxID3ADwr3DGJh71qFg/edit#gid=900781287"""
-PATH_XLSX = "./xlsx/"
-JSON_PATH = "./json/"
-SECRET_KEY = "A RANDOM KEY"
+from config import *
 
 
 ############################ helper function ############################
 def download_xlsx(name):
+# if can be downloaded ,return true
+# if can not be found, return false
     try:
-        urllib.request.urlretrieve(URL_BOCSAR + name + '.xlsx', \
-                PATH_XLSX + name + '.xlsx')
+        url = URL_BOCSAR + name + '.xlsx'
+        urllib.request.urlretrieve(url, XLSX_PATH + name + '.xlsx')
     except urllib.error.HTTPError:
-        print("Could not download!")
+        if PRINT_INFO:
+            print("Could not download from ", url)
+        return False
+        if PRINT_INFO:
+            print("Finish downloading ", url)
+    return True
 
 
 def read_excel(name):
     # open the first sheet
-    wb = xlrd.open_workbook(PATH_XLSX + name + '.xlsx')
+    wb = xlrd.open_workbook(XLSX_PATH + name + '.xlsx')
     sh = wb.sheet_by_index(0)
 
     # generate titles
@@ -73,7 +75,7 @@ def wirte_json(name, my_json):
 
 def read_postcode():
     # open postcode
-    wb = xlrd.open_workbook(PATH_XLSX + 'postcode' + '.xlsx')
+    wb = xlrd.open_workbook(XLSX_PATH + 'postcode' + '.xlsx')
     sh = wb.sheet_by_index(0)
     # generate list
     nlines = 1780
@@ -82,7 +84,13 @@ def read_postcode():
     # create dictionary
     postcode_to_region = defaultdict(list)
     for i in range(nlines):
-        postcode_to_region[int(postcode[i])].append(region[i])
+        # normilize lgaName
+        lgaName = region[i].replace(" ", "")
+        if LGANAME_LOWER:
+            lgaName = lgaName.lower() + 'lga'
+        else:
+            lgaName = lgaName.capitalize() + 'lga'
+        postcode_to_region[int(postcode[i])].append(lgaName)
     # function return
     return postcode_to_region
 
@@ -90,6 +98,8 @@ def read_postcode():
 ######################## authentication function ########################
 
 def authenticate_by_token(token, must_admin=False):
+    if not LOGIN_NEED:
+        return True
     if token is None:
         return False
     s = Serializer(SECRET_KEY)
@@ -142,16 +152,181 @@ def admin_login_required(f, message="You are not authorized"):
 app = Flask(__name__)
 
 
-@app.route("/admin", methods=['GET'])
+# create
+@app.route("/bocsar/", methods=['POST'])
 @admin_login_required
-def test():
-    print("You are admin!")
+def create():
+    # get the HTTP arguments
+    lgaName = request.headers.get("lgaName")
+    postcode = request.headers.get("postcode")
+    content_type = request.headers.get("Content-Type")
+    # a list that store lgaName, may be more than 1 name
+    lgaName_list = []
+    if postcode:
+        lgaName_list = postcode_database[int(postcode)][:]
+    # normilize lgaName
+    if lgaName:
+        lgaName = lgaName.replace(" ", "")
+        if LGANAME_LOWER:
+            lgaName = lgaName.lower() + 'lga'
+        else:
+            lgaName = lgaName.capitalize() + 'lga'
+        lgaName_list.append(lgaName)
+    
+    # save to database
+    lgaName_to_return = set()
+    for name in lgaName_list:
+        # check whether it is in lgaName_database
+        if name in lgaName_database:
+            lgaName_to_return.add(name)
+        else:
+        # check whether it is in database by query
+            my_jason = models.query_database(name)
+            if my_jason:
+                lgaName_to_return.add(name)
+                lgaName_database.add(name)
+            else:
+            # try to download the excel and add it to database
+                if download_xlsx(name):
+                    my_dict = read_excel(name)
+                    my_json = simplejson.dumps(my_dict)
+                    models.save_database(name, my_json)
+                    lgaName_to_return.add(name)
+                    lgaName_database.add(name)
+
+    # check the database
+    if PRINT_INFO:
+        print("lgaName = ", lgaName)
+        print("postcode = ", postcode)
+        print("Content-Type = ", content_type)
+        print("lgaName_list = ", lgaName_list)
+        print("lgaName_for_return = ", lgaName_to_return)
+        print("lgaName_database = ", lgaName_database)
+
+    # generate return dictionary
+    my_dict = {}
+    for name in lgaName_to_return:
+        my_dict[name] = {
+            "title": name,
+            "url": URL_COLLECTION + name
+        }
+
+    # generate reture code and error message
+    if my_dict:
+        status_code = 201
+    else:
+        my_dict["ERROR"] = "Nothing created!"
+        status_code = 400
+
+    # return json
+    if content_type == "application/json":
+        return jsonify(my_dict), status_code
+    else:   # return xml(by default)
+        return  dicttoxml.dicttoxml(
+                my_dict, 
+                attr_type=False, 
+                custom_root="entry"), status_code
 
 
-@app.route("/", methods=['GET'])
+# read
+@app.route("/bocsar/<id>", methods=['GET'])
 @login_required
-def gogogo():
-    print("You are login!")
+def read(id):
+    content_type = request.headers.get("Content-Type")
+    # check the database
+    if PRINT_INFO:
+        print("Content-Type = ", content_type)
+
+    my_dict = {}
+    if id in lgaName_database:
+        my_json = models.query_database(id)
+        my_dict = json.loads(my_json)
+        status_code = 200
+    else:
+        my_dict["Error: "] = {id + " not found!"}
+        status_code = 404
+
+    # return json
+    if content_type == "application/json":
+        return jsonify(my_dict), status_code
+    else:   # return xml(by default)
+        return  dicttoxml.dicttoxml(
+                my_dict, 
+                attr_type=False, 
+                custom_root="entry"), status_code
+
+
+# delete
+@app.route("/bocsar/<id>", methods=['DELETE'])
+@admin_login_required
+def delete(id):
+    content_type = request.headers.get("Content-Type")
+    # check the database
+    if PRINT_INFO:
+        print("Content-Type = ", content_type)
+
+    my_dict = {}
+    try:
+        lgaName_database.remove(id)
+        my_dict["OK: "] = {id + " has been deleted!"}
+        status_code = 200
+    except KeyError:
+        my_dict["Error: "] = {id + " not found!"}
+        status_code = 404
+
+    # return json
+    if content_type == "application/json":
+        return jsonify(my_dict), status_code
+    else:   # return xml(by default)
+        return  dicttoxml.dicttoxml(
+                my_dict, 
+                attr_type=False, 
+                custom_root="entry"), status_code
+
+
+# retrieve list
+@app.route("/bocsar/", methods=['GET'])
+@login_required
+def retrieve():
+    content_type = request.headers.get("Content-Type")
+    # check the database
+    if PRINT_INFO:
+        print("Content-Type = ", content_type)
+
+    # generate return dictionary
+    my_dict = {}
+    for name in lgaName_database:
+        my_dict[name] = {
+            "title": name,
+            "url": URL_COLLECTION + name
+        }
+
+    # return json
+    if content_type == "application/json":
+        return jsonify(my_dict), 200
+    else:   # return xml(by default)
+        return  dicttoxml.dicttoxml(
+                my_dict, 
+                attr_type=False, 
+                custom_root="entry"), 200
+
+
+# query
+@app.route("/bocsar/filter", methods=['GET'])
+@login_required
+def query():
+    # get header and query string
+    content_type = request.headers.get("Content-Type")
+    query_list = request.query_string.decode("utf-8").split("%20")
+
+    # check the database
+    if PRINT_INFO:
+        print("Content-Type = ", content_type)
+        print("query string = ", query_list)
+
+    
+    
+    return "hello"
 
 
 @app.route("/auth", methods=['GET'])
@@ -164,9 +339,9 @@ def generate_token():
         username = args.get("username")
         password = args.get("password")
 
-        # debug function
-        # print("Username =", username)
-        # print("Password =", password)
+        if PRINT_INFO:
+            print("Username =", username)
+            print("Password =", password)
 
         s = Serializer(SECRET_KEY, expires_in=600)
         token = s.dumps(username)
@@ -180,20 +355,34 @@ def generate_token():
 
 ############################# main function #############################
 if __name__ == "__main__":
+    postcode_database = read_postcode()
+    lgaName_database = set(['Boganlga', 'Lachlanlga', 'Cobarlga', 'Blandlga', 'Carrathoollga', 'Forbeslga'])
     app.run()
-    # postcode_to_region = read_postcode()
-    # name = "Balranaldlga"
-    # # # download_xlsx(name)
-    # my_dict = read_excel(name)
-    # # my_json = simplejson.dumps(my_dict)
-    # my_xml = dicttoxml.dicttoxml(
-    #         my_dict, 
-    #         attr_type=False, 
-    #         root=False)
 
-    # print(str(my_xml))
+
+    # d = datetime.utcnow() # <-- get time in UTC
+    # print(d.isoformat("T") + "Z")
+
+    # name = "Boganlga"
+    # # # # 
+    # 
+    # my_json = simplejson.dumps(my_dict)
+    # # my_xml = dicttoxml.dicttoxml(
+    # #         my_dict, 
+    # #         attr_type=False, 
+    # #         root=False)
+
+    # # print(str(my_xml))
     # print(my_dict)
-    # # print(xmltodict.unparse(my_json))
-    # # wirte_json(name, my_json)
-    # # models.save_database(name, my_json)
-    # print(models.query_database(name))
+    # # # wirte_json(name, my_json)
+    # models.save_database(name, my_json)
+    # my_dict = json.loads(models.query_database(name))
+    # print(type(my_dict))
+    # print(my_dict)
+    # if (models.query_database(name)):
+    #     print('yes')
+    # else:
+    #     print('no')
+    # models.getkey_database()
+    # print(lgaName_database)
+

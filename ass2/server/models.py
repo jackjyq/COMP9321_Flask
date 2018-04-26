@@ -1,7 +1,9 @@
 from mongoengine import connect,StringField, Document
+from config import DB_CONNECT
+
 
 class database(Document):
-    data = StringField(required = True)
+    y2010 = StringField(required = True)
     name = StringField(required = True)
     def __init__(self, name, data, *args, **values):
         super().__init__(*args, **values)
@@ -10,13 +12,13 @@ class database(Document):
 
 
 def save_database(name ,my_json):
-    connect(host='mongodb://jack_jiang:comp9321@ds247759.mlab.com:47759/my-database')
+    connect(host=DB_CONNECT)
     data = database(name ,my_json)
     data.save()
 
-
+# return a string or None
 def query_database(lgaName):
-    connect(host='mongodb://jack_jiang:comp9321@ds247759.mlab.com:47759/my-database')
+    connect(host=DB_CONNECT)
     record = database.objects(name = lgaName)
     for t in record:
         return t.data
