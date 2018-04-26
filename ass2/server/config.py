@@ -16,6 +16,9 @@ SECRET_KEY = "A RANDOM KEY"
 # debug
 LOGIN_NEED = False
 PRINT_INFO = True
+INITIAL_SETUP = True
 
+# true for realy URL
+# false for resource.mcndsj
 # if false, then apply capitalize name
 LGANAME_LOWER = False

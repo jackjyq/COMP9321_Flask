@@ -5,6 +5,8 @@ import models
 import xmltodict
 import dicttoxml
 import json
+import re
+from copy import deepcopy
 from functools import wraps
 from collections import defaultdict
 from datetime import datetime, timezone       
@@ -30,39 +32,89 @@ def download_xlsx(name):
     return True
 
 
-def read_excel(name):
+# def read_excel_by_group(name):
+#     # open the first sheet
+#     wb = xlrd.open_workbook(XLSX_PATH + name + '.xlsx')
+#     sh = wb.sheet_by_index(0)
+
+#     # generate titles
+#     year = sh.row_values(5)[2:]
+#     category = sh.row_values(6)[2:]
+#     title = category[:]
+#     ntitle = len(title)
+#     for i in range(ntitle):
+#         if (category[i] == 'Number of incidents'\
+#                 or category[i] == 'Rate per 100,000 population'):
+#             title[i] = year[int(i/2) * 2] + ' ' +  title[i]
+
+#     # generate dictionary
+#     my_dict = {}
+#     for i in range(7, sh.nrows - 14):
+#         # create new group
+#         if sh.row_values(i)[0] != '':
+#             group_key = sh.row_values(i)[0]
+#             group_value = {}
+#         # create new type
+#         type_key =  sh.row_values(i)[1]
+#         type_value = {}
+#         # add key and value to type
+#         for j in range(ntitle):
+#             type_value[title[j]] = sh.row_values(i)[j + 2]
+#         # add type to group
+#         group_value[type_key] = type_value
+#         # add group to dictionary
+#         my_dict[group_key] = group_value
+
+#     # function return
+#     return my_dict
+
+
+def read_excel_by_year(name):
     # open the first sheet
     wb = xlrd.open_workbook(XLSX_PATH + name + '.xlsx')
     sh = wb.sheet_by_index(0)
 
-    # generate titles
-    year = sh.row_values(5)[2:]
-    category = sh.row_values(6)[2:]
-    title = category[:]
-    ntitle = len(title)
-    for i in range(ntitle):
-        if (category[i] == 'Number of incidents'\
-                or category[i] == 'Rate per 100,000 population'):
-            title[i] = year[int(i/2) * 2] + ' ' +  title[i]
 
-    # generate dictionary
-    my_dict = {}
-    for i in range(7, sh.nrows - 14):
-        # create new group
-        if sh.row_values(i)[0] != '':
-            group_key = sh.row_values(i)[0]
-            group_value = {}
-        # create new type
-        type_key =  sh.row_values(i)[1]
-        type_value = {}
-        # add key and value to type
-        for j in range(ntitle):
-            type_value[title[j]] = sh.row_values(i)[j + 2]
-        # add type to group
-        group_value[type_key] = type_value
-        # add group to dictionary
-        my_dict[group_key] = group_value
 
+    # generate years
+    years = re.findall(r'\d+', ''.join(sh.row_values(5)[2:]))
+    nyears = len(years)
+
+    if PRINT_INFO:
+        print("years = ", years)
+        print("number of years = ", nyears)
+
+    # initialize dictionary, return None if empty
+    my_dict = defaultdict(lambda: None)
+    for i in range(nyears + 1): # the extra 1 is for trend
+        if i < nyears: # for year
+            year_key = years[i]
+        else:   # for trend
+            year_key = "trend"
+        year_value = {}
+        # iterate rows of excel
+        for row in range(7, sh.nrows - 14):
+            # create group
+            if sh.row_values(row)[0] != '':
+                group_key = sh.row_values(row)[0]
+                group_value = {}
+            # create type
+            type_key =  sh.row_values(row)[1]
+            type_value = {}
+            # add item to type
+            if i < nyears: # for year
+                type_value["number"] = sh.row_values(row)[2 + i*2]
+                type_value["rate"] = sh.row_values(row)[2 + i*2 + 1]
+            else:   # for trend
+                type_value["24_mon_trend"] = sh.row_values(row)[2 + i*2]
+                type_value["60_mon_trend"] = sh.row_values(row)[2 + i*2 + 1]
+                type_value["rank"] = sh.row_values(row)[2 + i*2 + 2]
+            # add type to group
+            group_value[type_key] = type_value
+            # add group to year
+            year_value[group_key] = group_value
+            # add year to dictionary
+            my_dict[year_key] = year_value
     # function return
     return my_dict
 
@@ -84,16 +136,19 @@ def read_postcode():
     # create dictionary
     postcode_to_region = defaultdict(list)
     for i in range(nlines):
-        # normilize lgaName
-        lgaName = region[i].replace(" ", "")
-        if LGANAME_LOWER:
-            lgaName = lgaName.lower() + 'lga'
-        else:
-            lgaName = lgaName.capitalize() + 'lga'
+        lgaName = name_to_lgaName(region[i])
         postcode_to_region[int(postcode[i])].append(lgaName)
     # function return
     return postcode_to_region
 
+
+def name_to_lgaName(name):
+    lgaName = name.replace(" ", "")
+    if LGANAME_LOWER:
+        lgaName = lgaName.lower() + 'lga'
+    else:
+        lgaName = lgaName.capitalize() + 'lga'
+    return lgaName
  
 ######################## authentication function ########################
 
@@ -166,11 +221,7 @@ def create():
         lgaName_list = postcode_database[int(postcode)][:]
     # normilize lgaName
     if lgaName:
-        lgaName = lgaName.replace(" ", "")
-        if LGANAME_LOWER:
-            lgaName = lgaName.lower() + 'lga'
-        else:
-            lgaName = lgaName.capitalize() + 'lga'
+        lgaName = name_to_lgaName(lgaName)
         lgaName_list.append(lgaName)
     
     # save to database
@@ -188,7 +239,7 @@ def create():
             else:
             # try to download the excel and add it to database
                 if download_xlsx(name):
-                    my_dict = read_excel(name)
+                    my_dict = read_excel_by_year(name)
                     my_json = simplejson.dumps(my_dict)
                     models.save_database(name, my_json)
                     lgaName_to_return.add(name)
@@ -315,18 +366,54 @@ def retrieve():
 @app.route("/bocsar/filter", methods=['GET'])
 @login_required
 def query():
-    # get header and query string
+    # get header
     content_type = request.headers.get("Content-Type")
-    query_list = request.query_string.decode("utf-8").split("%20")
 
-    # check the database
+    # parse query string
+    query_list = request.query_string.decode("utf-8").split("%20")
+    query_filter = defaultdict(set)
+    if ((len(query_list) + 1) % 4 == 0):    # valid number of operand
+        group_of_operand = int((len(query_list) + 1) / 4)
+        for i in range(group_of_operand):
+            query_filter[query_list[4*i]].add(query_list[4*i + 2])
+
     if PRINT_INFO:
         print("Content-Type = ", content_type)
         print("query string = ", query_list)
+        print("lgaName = ", query_filter['lgaName'])
+        print("year = ", query_filter['year'])
 
-    
-    
-    return "hello"
+    # generate return dict and status_code
+    return_dict = {}
+    status_code = 200
+    for name in query_filter['lgaName']:
+        name = name_to_lgaName(name)
+        if name in lgaName_database:
+        # for every name exist in database and filter
+            name_dict = {}
+            # retreive json from database and convert to dict
+            my_json = models.query_database(name)
+            my_dict = json.loads(my_json)
+
+            if query_filter['year']:
+            # apply year filter if exist
+                for year in query_filter['year']:
+                    if year in my_dict.keys():
+                    # for every year exist in database and filter
+                        name_dict[year] = my_dict[year]
+            else:   # if year filter not exist
+                name_dict = my_dict
+            # add name_dict to return_dict
+            return_dict[name] = deepcopy(name_dict)
+
+    # return json
+    if content_type == "application/json":
+        return jsonify(return_dict), 200
+    else:   # return xml(by default)
+        return  dicttoxml.dicttoxml(
+                return_dict, 
+                attr_type=False, 
+                custom_root="entry"), 200
 
 
 @app.route("/auth", methods=['GET'])
@@ -356,33 +443,8 @@ def generate_token():
 ############################# main function #############################
 if __name__ == "__main__":
     postcode_database = read_postcode()
-    lgaName_database = set(['Boganlga', 'Lachlanlga', 'Cobarlga', 'Blandlga', 'Carrathoollga', 'Forbeslga'])
+    lgaName_database = set()
+    if INITIAL_SETUP:
+        lgaName_database = set(['Boganlga', 'Lachlanlga', 'Cobarlga', 'Blandlga', 'Carrathoollga', 'Forbeslga'])
     app.run()
-
-
-    # d = datetime.utcnow() # <-- get time in UTC
-    # print(d.isoformat("T") + "Z")
-
-    # name = "Boganlga"
-    # # # # 
-    # 
-    # my_json = simplejson.dumps(my_dict)
-    # # my_xml = dicttoxml.dicttoxml(
-    # #         my_dict, 
-    # #         attr_type=False, 
-    # #         root=False)
-
-    # # print(str(my_xml))
-    # print(my_dict)
-    # # # wirte_json(name, my_json)
-    # models.save_database(name, my_json)
-    # my_dict = json.loads(models.query_database(name))
-    # print(type(my_dict))
-    # print(my_dict)
-    # if (models.query_database(name)):
-    #     print('yes')
-    # else:
-    #     print('no')
-    # models.getkey_database()
-    # print(lgaName_database)
 
