@@ -2,73 +2,143 @@
 <html>
 
 <head>
+    <style>
+        h1 { 
+            display: block;
+            font-size: 1.5em;
+            margin-top: 0.00em;
+            margin-bottom: 0.00em;
+            margin-left: 0;
+            margin-right: 0;
+            font-weight: bold;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        
+        th, td {
+            text-align: left;
+        }
+        
+        th {
+            background-color: grey;
+            color: white;
+        }
+    </style>
 </head>
+
 
 <body>
 
-<h1>NSW Crime Data Import and Publication Service</h1>
-<li>Author: Yiqun Jiang (z5129432@student.unsw.edu.au)</li>
+<h1 align="center">NSW Crime Data Import and Publication Service</h1>
+
+<center><small>
+        Written 2018 S1 by Yiqun Jiang (z5129432) for COMP9321 assignment 2
+</small></center>
+
+
+<table>
+    <tr>
+        <th>Authentication</th>
+        <th>Import</th>
+        <th>Read</th>
+        <th>Delete</th>
+        <th>ListAll</th>
+        
+    </tr>
+
+    <tr>
+        <td>
+            <form method="POST" action="/auth">
+                username:&nbsp <input type="text" name="username"> <br>
+                password:&nbsp <input type="text" name="password"> <br>
+                <button type="submit" >SignIn</button>
+            </form>
+        </td>
+        
+        <td>
+            <form method="POST" action="/create">
+                lgaName:&nbsp <input type="text" name="lgaName"> <br>
+                postcode:&nbsp <input type="text" name="postcode"> <br>
+                Content-Type:&nbsp <select name="contentType">
+                        <option value='application/atom+xml'>xml</option>
+                        <option value='application/json'>json</option>
+                </select>
+                <button type="submit" >Import</button>
+            </form>
+        </td>
+
+        <td>
+            <form method="POST" action="/read">
+                lgaName:&nbsp <input type="text" name="lgaName"> <br>
+                <br>
+                Content-Type:&nbsp <select name="contentType">
+                        <option value='application/atom+xml'>xml</option>
+                        <option value='application/json'>json</option>
+                </select>
+                <button type="submit" >Read</button>
+            </form>
+        </td>
+
+        <td>
+            <form method="POST" action="/delete">
+                lgaName:&nbsp <input type="text" name="lgaName"> <br>
+                <br>
+                Content-Type:&nbsp <select name="contentType">
+                        <option value='application/atom+xml'>xml</option>
+                        <option value='application/json'>json</option>
+                </select>
+                <button type="submit" >Delete</button>
+            </form>
+        </td>
+
+        <td>
+            <form method="POST" action="/list">
+                <br>
+                <br>
+                    Content-Type:&nbsp <select name="contentType">
+                            <option value='application/atom+xml'>xml</option>
+                            <option value='application/json'>json</option>
+                    </select>
+                <button type="submit" >listAll</button>
+            </form>
+        </td>
+    </tr>
+</table>
+
+
+<small>
+    <b>PS: &nbsp</b>
+    A valid lgaName doesn't have <b><i>lga</i></b> surfix with it. 
+    <b>&nbsp &nbsp &nbsp eg. &nbsp</b> <i>Cobar</i>
+    <b>&nbsp &nbsp &nbsp eg. &nbsp</b> <i>Blue Mountains</i>
+</small>
+
+<table>
+    <tr>
+        <th>Query</th>
+    </tr>
+    <tr>
+        <td>
+            <form method="POST" action="/query">
+                Filter:&nbsp <input type="text" name="query" size=50> &nbsp
+                Content-Type:&nbsp <select name="contentType">
+                        <option value='application/atom+xml'>xml</option>
+                        <option value='application/json'>json</option>
+                </select> &nbsp
+                <button type="submit" >Query</button>
+                <b>&nbsp &nbsp &nbsp eg. &nbsp</b>
+                <small><i>lgaName eq Cobar or lgaName eq Bogan</i></small>
+                <b>&nbsp &nbsp &nbsp eg. &nbsp</b> 
+                <small><i>lgaName eq Cobar and year eq 2014</i></small>
+            </form>
+        </td>
+    </tr>
+</table>
+
 <hr>
 
-<h3>Authentication:</h3>    
-    <form method="POST" action="/auth">
-    username:&nbsp <input type="text" name="username"> &nbsp
-    password:&nbsp <input type="text" name="password"> &nbsp
-    Content-Type:&nbsp <select name="contentType">
-            <option value='application/atom+xml'>xml</option>
-            <option value='application/json'>json</option>
-    </select> &nbsp
-    <button type="submit" >Go</button>
-</form>
-
-<h3>Import data:</h3>
-<form method="POST" action="/create">
-    lgaName:&nbsp <input type="text" name="lgaName"> &nbsp
-    postcode:&nbsp <input type="text" name="postcode"> &nbsp
-    Content-Type:&nbsp <select name="contentType">
-            <option value='application/atom+xml'>xml</option>
-            <option value='application/json'>json</option>
-    </select> &nbsp
-    <button type="submit" >Go</button>
-
-<h3>Delete data:</h3>
-<form method="POST" action="/delete">
-    lgaName:&nbsp <input type="text" name="lgaName"> &nbsp
-    Content-Type:&nbsp <select name="contentType">
-            <option value='application/atom+xml'>xml</option>
-            <option value='application/json'>json</option>
-    </select> &nbsp
-    <button type="submit" >Go</button>
-
-<h3>Read single data:</h3>
-<form method="POST" action="/read">
-    lgaName:&nbsp <input type="text" name="lgaName"> &nbsp
-    Content-Type:&nbsp <select name="contentType">
-            <option value='application/atom+xml'>xml</option>
-            <option value='application/json'>json</option>
-    </select> &nbsp
-    <button type="submit" >Go</button>
-
-<h3>List all data:</h3>
-<form method="POST" action="/list">
-    Content-Type:&nbsp <select name="contentType">
-            <option value='application/atom+xml'>xml</option>
-            <option value='application/json'>json</option>
-    </select> &nbsp
-    <button type="submit" >Go</button>
-
-<h3>Query data:</h3>
-<form method="POST" action="/query">
-    Query:&nbsp <textarea type="text" name="query" rows="1" cols="50">
-            input your query here
-    </textarea> &nbsp
-    Content-Type:&nbsp <select name="contentType">
-            <option value='application/atom+xml'>xml</option>
-            <option value='application/json'>json</option>
-    </select> &nbsp
-    <button type="submit" >Go</button>
-
-<hr>
 <div>
     {{ display | safe }}
 </div>

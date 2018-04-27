@@ -173,7 +173,7 @@ def authenticate_by_token(token, must_admin=False):
 
 
 # login as admin or guest
-def login_required(f, message="You are not authorized"):
+def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
 
@@ -182,14 +182,13 @@ def login_required(f, message="You are not authorized"):
         if authenticate_by_token(token, must_admin=False):
             return f(*args, **kwargs)
 
-        return jsonify(message=message), 401
-        # abort(401, message=message)
+        return "Error: You are not authorized", 401
 
     return decorated_function
 
 
 # only allowed login as admin
-def admin_login_required(f, message="You are not authorized"):
+def admin_login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
 
@@ -197,8 +196,7 @@ def admin_login_required(f, message="You are not authorized"):
         if authenticate_by_token(token, must_admin=True):
             return f(*args, **kwargs)
 
-        return jsonify(message=message), 401
-        # abort(401, message=message)
+        return "Error: You are not authorized", 401
 
     return decorated_function
 
@@ -294,7 +292,7 @@ def read(id):
         my_dict = json.loads(my_json)
         status_code = 200
     else:
-        my_dict["Error: "] = {id + " not found!"}
+        my_dict["Error: "] = id + " not found!"
         status_code = 404
 
     # return json
@@ -319,12 +317,15 @@ def delete(id):
     my_dict = {}
     try:
         lgaName_database.remove(id)
-        my_dict["OK: "] = {id + " has been deleted!"}
+        my_dict["OK: "] = id + " has been deleted!"
         status_code = 200
     except KeyError:
-        my_dict["Error: "] = {id + " not found!"}
+        my_dict["Error: "] = id + " not found!"
         status_code = 404
-
+    
+    if PRINT_INFO:
+        print("my_dict = ", my_dict)
+		
     # return json
     if content_type == "application/json":
         return jsonify(my_dict), status_code
@@ -415,7 +416,7 @@ def query():
                 attr_type=False, 
                 custom_root="entry"), 200
 
-
+# authentication
 @app.route("/auth", methods=['GET'])
 def generate_token():
         parser = reqparse.RequestParser()
@@ -435,9 +436,9 @@ def generate_token():
 
         if ((username == 'admin' and password == 'admin')
                 or (username == 'guest' and password == 'guest')):
-            return token.decode()
+            return token.decode(), 200
 
-        return jsonify({"ERROR" : "wrong username or password"}), 404
+        return "ERROR: wrong username or password", 401
 
 
 ############################# main function #############################
