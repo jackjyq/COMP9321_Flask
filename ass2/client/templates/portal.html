@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+</head>
+
+<body>
+
+<h1>NSW Crime Data Import and Publication Service</h1>
+<li>Author: Yiqun Jiang (z5129432@student.unsw.edu.au)</li>
+<hr>
+
+<h3>Authentication:</h3>    
+    <form method="POST" action="/auth">
+    username:&nbsp <input type="text" name="username"> &nbsp
+    password:&nbsp <input type="text" name="password"> &nbsp
+    Content-Type:&nbsp <select name="contentType">
+            <option value='application/atom+xml'>xml</option>
+            <option value='application/json'>json</option>
+    </select> &nbsp
+    <button type="submit" >Go</button>
+</form>
+
+<h3>Import data:</h3>
+<form method="POST" action="/create">
+    lgaName:&nbsp <input type="text" name="lgaName"> &nbsp
+    postcode:&nbsp <input type="text" name="postcode"> &nbsp
+    Content-Type:&nbsp <select name="contentType">
+            <option value='application/atom+xml'>xml</option>
+            <option value='application/json'>json</option>
+    </select> &nbsp
+    <button type="submit" >Go</button>
+
+<h3>Delete data:</h3>
+<form method="POST" action="/delete">
+    lgaName:&nbsp <input type="text" name="lgaName"> &nbsp
+    Content-Type:&nbsp <select name="contentType">
+            <option value='application/atom+xml'>xml</option>
+            <option value='application/json'>json</option>
+    </select> &nbsp
+    <button type="submit" >Go</button>
+
+<h3>Read single data:</h3>
+<form method="POST" action="/read">
+    lgaName:&nbsp <input type="text" name="lgaName"> &nbsp
+    Content-Type:&nbsp <select name="contentType">
+            <option value='application/atom+xml'>xml</option>
+            <option value='application/json'>json</option>
+    </select> &nbsp
+    <button type="submit" >Go</button>
+
+<h3>List all data:</h3>
+<form method="POST" action="/list">
+    Content-Type:&nbsp <select name="contentType">
+            <option value='application/atom+xml'>xml</option>
+            <option value='application/json'>json</option>
+    </select> &nbsp
+    <button type="submit" >Go</button>
+
+<h3>Query data:</h3>
+<form method="POST" action="/query">
+    Query:&nbsp <textarea type="text" name="query" rows="1" cols="50">
+            input your query here
+    </textarea> &nbsp
+    Content-Type:&nbsp <select name="contentType">
+            <option value='application/atom+xml'>xml</option>
+            <option value='application/json'>json</option>
+    </select> &nbsp
+    <button type="submit" >Go</button>
+
+<hr>
+<div>
+    {{ display | safe }}
+</div>
+</body>
+
+</html>
